@@ -1,0 +1,61 @@
+name: Sync from upstream
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every Monday at 06:00 UTC
+    - cron: '0 6 * * 1'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: git remote add upstream https://github.com/KhronosGroup/SPIRV-LLVM-Translator.git
+
+      - name: Fetch remotes
+        run: |
+          git fetch origin
+          git fetch upstream
+
+      - name: Sync each llvm_release branch
+        run: |
+          PATCH="$(mktemp)"
+          git show main:.github/patches/adaptivecpp.patch > "$PATCH"
+          FAILED=()
+          for branch in $(git branch -r | grep 'origin/llvm_release_' | sed 's|.*origin/||' | awk -F_ '$3 >= 150' | sort -t_ -k3 -n); do
+            if ! git ls-remote --exit-code upstream "refs/heads/$branch" > /dev/null 2>&1; then
+              echo "Skipping $branch (not in upstream)"
+              continue
+            fi
+
+            echo "=== Syncing $branch ==="
+            if git checkout -fB "$branch" "upstream/$branch" && \
+               git rm -rf .github/workflows/ && \
+               git apply "$PATCH" && \
+               git commit -m "Apply AdaptiveCpp patch" && \
+               git push --force-with-lease origin "$branch"; then
+              echo "Done: $branch"
+            else
+              echo "::error::Failed to sync $branch"
+              FAILED+=("$branch")
+              git checkout -- . 2>/dev/null || true
+            fi
+          done
+          if [ ${#FAILED[@]} -gt 0 ]; then
+            echo "::error::The following branches failed to sync: ${FAILED[*]}"
+            exit 1
+          fi
