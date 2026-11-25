@@ -1,10 +1,10 @@
-diff --git a/lib/SPIRV/SPIRVInternal.h b/lib/SPIRV/SPIRVInternal.h
---- a/lib/SPIRV/SPIRVInternal.h
-+++ b/lib/SPIRV/SPIRVInternal.h
-@@ -180,11 +180,11 @@ typedef SPIRVMap<Op, Op, IntBoolOpMapId> IntBoolOpMap;
-   "-v512:512:512-v1024:1024:1024"
+diff --git a/include/LLVMSPIRVOpts.h b/include/LLVMSPIRVOpts.h
+--- a/include/LLVMSPIRVOpts.h
++++ b/include/LLVMSPIRVOpts.h
+@@ -120,11 +120,11 @@ enum class DebugInfoEIS : uint32_t {
+ enum class BuiltinFormat : uint32_t { Function, Global };
  
- enum SPIRAddressSpace {
+ enum SPIRAddressSpace : uint32_t {
 -  SPIRAS_Private,
 +  SPIRAS_Generic,
    SPIRAS_Global,
@@ -15,3 +15,20 @@ diff --git a/lib/SPIRV/SPIRVInternal.h b/lib/SPIRV/SPIRVInternal.h
    SPIRAS_GlobalDevice,
    SPIRAS_GlobalHost,
    SPIRAS_Input,
+diff --git a/lib/SPIRV/LLVMSPIRVOpts.cpp b/lib/SPIRV/LLVMSPIRVOpts.cpp
+--- a/lib/SPIRV/LLVMSPIRVOpts.cpp
++++ b/lib/SPIRV/LLVMSPIRVOpts.cpp
+@@ -64,11 +64,11 @@ struct TargetAddrSpaceMapping {
+ constexpr TargetAddrSpaceMapping BuiltinAddrSpaceMaps[] = {
+     {Triple::amdgpu,
+      {
+-         AMDGPUAS::PRIVATE_ADDRESS,  // SPIRAS_Private
++         AMDGPUAS::FLAT_ADDRESS,     // SPIRAS_Generic
+          AMDGPUAS::GLOBAL_ADDRESS,   // SPIRAS_Global
+          AMDGPUAS::CONSTANT_ADDRESS, // SPIRAS_Constant
+          AMDGPUAS::LOCAL_ADDRESS,    // SPIRAS_Local
+-         AMDGPUAS::FLAT_ADDRESS,     // SPIRAS_Generic
++         AMDGPUAS::PRIVATE_ADDRESS,  // SPIRAS_Private
+          AMDGPUAS::GLOBAL_ADDRESS,   // SPIRAS_GlobalDevice
+          AMDGPUAS::GLOBAL_ADDRESS,   // SPIRAS_GlobalHost
+          // Keep identity (7, 8). For AMDGPU these are the buffer fat/resource

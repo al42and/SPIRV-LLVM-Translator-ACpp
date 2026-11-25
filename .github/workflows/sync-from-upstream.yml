@@ -31,37 +31,44 @@ jobs:
           git fetch origin
           git fetch upstream
 
-      - name: Sync each llvm_release branch
+      - name: Sync branches
         run: |
           PATCH="$(mktemp)"
-          git show patch:.github/patches/adaptivecpp.patch > "$PATCH"
           FAILED=()
-          for branch in main $(git branch -r | grep 'origin/llvm_release_' | sed 's|.*origin/||' | awk -F_ '$3 >= 150' | sort -t_ -k3 -n); do
-            if ! git ls-remote --exit-code upstream "refs/heads/$branch" > /dev/null 2>&1; then
-              echo "Skipping $branch (not in upstream)"
-              continue
-            fi
-
+          for branch in main $(git for-each-ref --format='%(refname:lstrip=3)' 'refs/remotes/upstream/llvm_release_*' | awk -F_ '$3 ~ /^[0-9]+$/ && $3 >= 150' | sort -t_ -k3 -n); do
             echo "=== Syncing $branch ==="
+            case "$branch" in
+              llvm_release_1[5-9]0|llvm_release_2[0-2]0)
+                PATCH_FILE=".github/patches/adaptivecpp-llvm15-22.patch" ;;
+              llvm_release_230)
+                PATCH_FILE=".github/patches/adaptivecpp-llvm23.patch" ;;
+              *)
+                PATCH_FILE=".github/patches/adaptivecpp.patch" ;;
+            esac
+
             UPSTREAM_SHA=$(git rev-parse "upstream/$branch")
-            if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
-              PARENT_SHA=$(git rev-parse "origin/$branch^1" 2>/dev/null || echo "")
-              if [ "$UPSTREAM_SHA" = "$PARENT_SHA" ]; then
-                echo "Skipping $branch (upstream unchanged)"
+            if git show "patch:$PATCH_FILE" > "$PATCH" && \
+               git checkout -fB "$branch" "upstream/$branch" && \
+               git rm -rf --ignore-unmatch .github/workflows/ && \
+               git apply --index "$PATCH"; then
+              if git show-ref --verify --quiet "refs/remotes/origin/$branch" && \
+                 [ "$UPSTREAM_SHA" = "$(git rev-parse "origin/$branch^1" 2>/dev/null || echo "")" ] && \
+                 git diff --cached --quiet "origin/$branch"; then
+                echo "Skipping $branch (already up to date)"
                 continue
               fi
-            fi
 
-            if git checkout -fB "$branch" "upstream/$branch" && \
-               git rm -rf .github/workflows/ && \
-               git apply "$PATCH" && \
-               git commit -m "Apply AdaptiveCpp patch" && \
-               git push --force-with-lease origin "$branch"; then
-              echo "Done: $branch"
+              if git commit -m "Apply AdaptiveCpp patch" && \
+                 git push --force-with-lease origin "$branch"; then
+                git show --stat --oneline HEAD
+                echo "Done: $branch"
+              else
+                echo "::error::Failed to push $branch"
+                FAILED+=("$branch")
+              fi
             else
-              echo "::error::Failed to sync $branch"
+              echo "::error::Failed to apply $PATCH_FILE to $branch"
               FAILED+=("$branch")
-              git checkout -- . 2>/dev/null || true
             fi
           done
           if [ ${#FAILED[@]} -gt 0 ]; then
