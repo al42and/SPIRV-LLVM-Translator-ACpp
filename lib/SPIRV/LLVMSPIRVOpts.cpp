@@ -64,11 +64,11 @@ struct TargetAddrSpaceMapping {
 constexpr TargetAddrSpaceMapping BuiltinAddrSpaceMaps[] = {
     {Triple::amdgpu,
      {
-         AMDGPUAS::PRIVATE_ADDRESS,  // SPIRAS_Private
+         AMDGPUAS::FLAT_ADDRESS,     // SPIRAS_Generic
          AMDGPUAS::GLOBAL_ADDRESS,   // SPIRAS_Global
          AMDGPUAS::CONSTANT_ADDRESS, // SPIRAS_Constant
          AMDGPUAS::LOCAL_ADDRESS,    // SPIRAS_Local
-         AMDGPUAS::FLAT_ADDRESS,     // SPIRAS_Generic
+         AMDGPUAS::PRIVATE_ADDRESS,  // SPIRAS_Private
          AMDGPUAS::GLOBAL_ADDRESS,   // SPIRAS_GlobalDevice
          AMDGPUAS::GLOBAL_ADDRESS,   // SPIRAS_GlobalHost
          // Keep identity (7, 8). For AMDGPU these are the buffer fat/resource

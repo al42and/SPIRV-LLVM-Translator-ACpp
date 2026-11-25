@@ -120,11 +120,11 @@ enum class DebugInfoEIS : uint32_t {
 enum class BuiltinFormat : uint32_t { Function, Global };
 
 enum SPIRAddressSpace : uint32_t {
-  SPIRAS_Private,
+  SPIRAS_Generic,
   SPIRAS_Global,
   SPIRAS_Constant,
   SPIRAS_Local,
-  SPIRAS_Generic,
+  SPIRAS_Private,
   SPIRAS_GlobalDevice,
   SPIRAS_GlobalHost,
   SPIRAS_Input,
